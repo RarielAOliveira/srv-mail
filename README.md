@@ -112,7 +112,3 @@ Para uma apresentação, a demonstração pode seguir esta lógica:
 2.  **Faça uma Demonstração Prática:**
       * Mostre o processo de envio de uma mensagem de `alice` para `bob`.
       * Em seguida, mostre como `bob` recebe essa mensagem, seja pela linha de comando ou pela interface do Roundcube.
-
------
-
-Este README pode servir como um guia rápido e claro para qualquer pessoa que queira replicar o seu projeto ou entender os passos básicos para configurar um servidor de e-mail.
