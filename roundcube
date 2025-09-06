@@ -1,114 +1,99 @@
-# 📧 Servidor de E-mail Básico no Ubuntu
-
-Este repositório contém os documentos e um roteiro simplificado para montar um servidor de e-mail básico em uma máquina **Ubuntu**. A ideia é criar um ambiente de demonstração para entender os componentes principais de um sistema de e-mail.
-
-## 🚀 Tecnologias Utilizadas
-
-  * **Postfix:** Responsável por enviar e receber e-mails (MTA - Mail Transfer Agent).
-  * **Dovecot:** Fornece acesso aos e-mails através dos protocolos IMAP/POP3.
-  * **Roundcube (Opcional):** Um cliente de webmail para acessar as contas via navegador.
-
-## ⚙️ Roteiro de Instalação e Configuração
-
-Siga os passos abaixo para configurar o servidor de e-mail na sua máquina Ubuntu.
-
-### 1\. Atualizar o Sistema
-
-É sempre uma boa prática garantir que o sistema esteja atualizado antes de começar.
-
-```bash
+🚀 Instalação do Roundcube no Ubuntu 22.04
+1. Atualizar o sistema
 sudo apt update && sudo apt upgrade -y
-```
 
-### 2\. Instalar o Postfix
+2. Instalar dependências
 
-O Postfix é o coração do nosso servidor. Durante a instalação, ele fará algumas perguntas de configuração.
+Roundcube precisa de Apache/Nginx, PHP e MariaDB/MySQL. Vamos instalar Apache + MariaDB + PHP:
 
-```bash
-sudo apt install postfix -y
-```
+sudo apt install apache2 mariadb-server mariadb-client -y
+sudo apt install php php-cli php-mysql php-xml php-mbstring php-intl php-zip php-curl unzip -y
 
-**Durante a instalação:**
+3. Criar banco de dados para o Roundcube
 
-  * **Tipo de configuração:** Selecione `Internet Site`.
-  * **System mail name:** Defina um nome para o seu domínio local. Por exemplo: `meuservidor.local`.
+Entre no MariaDB:
 
-Se precisar revisar as configurações depois, edite o arquivo principal:
+sudo mysql -u root -p
 
-```bash
-sudo nano /etc/postfix/main.cf
-```
 
-### 3\. Instalar o Dovecot
+E rode:
 
-O Dovecot é necessário para que os usuários possam acessar suas caixas de entrada usando clientes de e-mail como Thunderbird ou aplicativos de celular. Ele implementa os protocolos IMAP e POP3.
+CREATE DATABASE roundcubemail;
+CREATE USER 'roundcube'@'localhost' IDENTIFIED BY 'senha123';
+GRANT ALL PRIVILEGES ON roundcubemail.* TO 'roundcube'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
 
-```bash
-sudo apt install dovecot-imapd dovecot-pop3d -y
-```
+4. Baixar e configurar o Roundcube
 
-O arquivo de configuração principal geralmente não precisa de alterações, mas você pode encontrá-lo aqui:
+Baixe a versão mais recente (exemplo: 1.6.x):
 
-```
-/etc/dovecot/dovecot.conf
-```
+cd /tmp
+wget https://github.com/roundcube/roundcubemail/releases/download/1.6.6/roundcubemail-1.6.6-complete.tar.gz
+tar -xvzf roundcubemail-*.tar.gz
+sudo mv roundcubemail-*/ /var/www/html/roundcube
 
-### 4\. Criar Usuários de Teste
+5. Permissões
+sudo chown -R www-data:www-data /var/www/html/roundcube
+sudo chmod -R 755 /var/www/html/roundcube
 
-Para demonstrar o envio e recebimento de e-mails, podemos usar os usuários locais do próprio Ubuntu como contas de e-mail.
+6. Configurar Apache
 
-```bash
-sudo adduser alice
-sudo adduser bob
-```
+Crie um host virtual:
 
-Agora, os e-mails enviados para `alice` ou `bob` no servidor local serão entregues em suas respectivas caixas de entrada.
+sudo nano /etc/apache2/sites-available/roundcube.conf
 
-### 5\. Testar o Envio de E-mail Local
 
-Vamos usar a ferramenta `mail` para enviar uma mensagem de teste. Primeiro, instale o `mailutils` se ainda não tiver:
+Cole:
 
-```bash
-sudo apt install mailutils -y
-```
+<VirtualHost *:80>
+    ServerName localhost
+    DocumentRoot /var/www/html/roundcube
 
-**Exemplo:**
-Faça login como o usuário `alice` e envie uma mensagem para `bob`.
+    <Directory /var/www/html/roundcube/>
+        Options +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
 
-```bash
-# Exemplo de como enviar um email de Alice para Bob
-echo "Oi Bob, teste do servidor!" | mail -s "Teste" bob
-```
+    ErrorLog ${APACHE_LOG_DIR}/roundcube_error.log
+    CustomLog ${APACHE_LOG_DIR}/roundcube_access.log combined
+</VirtualHost>
 
-Para verificar se a mensagem foi recebida, faça login como o usuário `bob` e digite `mail`:
 
-```bash
-# Logado como bob
-mail
-```
+Ative e reinicie:
 
-Você verá a mensagem de `alice` na lista.
+sudo a2ensite roundcube.conf
+sudo a2enmod rewrite
+sudo systemctl restart apache2
 
-### 6\. (Opcional) Instalar um Webmail com Roundcube
+7. Instalar o banco de dados inicial do Roundcube
+cd /var/www/html/roundcube/SQL
+sudo mysql -u root -p roundcubemail < mysql.initial.sql
 
-Para uma demonstração mais visual e interativa, você pode instalar um cliente de webmail. O Roundcube é uma ótima opção.
+8. Acessar instalador
 
-```bash
-sudo apt install roundcube roundcube-core roundcube-mysql -y
-```
+No navegador da VM:
 
-Após a instalação, você poderá acessar o webmail pelo navegador:
-`http://<ip-do-servidor>/roundcube`
+http://localhost/roundcube/installer
 
-Use os usuários que você criou (`alice`, `bob`) para fazer login e testar o envio e recebimento de e-mails diretamente pela interface web.
 
-## 🎬 Demonstração para Apresentação
+Ele vai rodar um check de dependências.
 
-Para uma apresentação, a demonstração pode seguir esta lógica:
+Configure o banco: usuário roundcube, senha senha123.
 
-1.  **Explique o Papel de Cada Componente:**
-      * **Postfix:** É o carteiro que envia e recebe e-mails.
-      * **Dovecot:** É a caixa dos correios, que organiza e entrega os e-mails aos usuários.
-2.  **Faça uma Demonstração Prática:**
-      * Mostre o processo de envio de uma mensagem de `alice` para `bob`.
-      * Em seguida, mostre como `bob` recebe essa mensagem, seja pela linha de comando ou pela interface do Roundcube.
+Configure IMAP/SMTP apontando para localhost (onde está Dovecot/Postfix).
+
+9. Finalizar
+
+Remova a pasta de instalação (por segurança):
+
+sudo rm -rf /var/www/html/roundcube/installer
+
+
+Agora já pode acessar:
+
+http://localhost/roundcube
+
+
+Login: alice / senha que você definiu no Linux.
