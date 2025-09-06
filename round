@@ -1,0 +1,71 @@
+🔎 1. Conferir permissões da pasta
+
+No terminal:
+
+sudo chown -R www-data:www-data /var/www/html/roundcube
+sudo chmod -R 755 /var/www/html/roundcube
+
+
+Isso garante que o Apache (usuário www-data) tenha acesso.
+
+🔎 2. Habilitar AllowOverride no Apache
+
+Abra seu VirtualHost:
+
+sudo nano /etc/apache2/sites-available/roundcube.conf
+
+
+Verifique se está assim:
+
+<Directory /var/www/html/roundcube/>
+    Options +FollowSymLinks
+    AllowOverride All
+    Require all granted
+</Directory>
+
+
+Se não estiver, ajuste. Depois rode:
+
+sudo a2enmod rewrite
+sudo systemctl restart apache2
+
+🔎 3. Conferir se o diretório installer existe
+
+O Roundcube bloqueia o acesso ao instalador se o .htaccess não for permitido.
+Cheque:
+
+ls -l /var/www/html/roundcube/installer
+
+
+Se existir, certifique-se que tem permissão:
+
+sudo chown -R www-data:www-data /var/www/html/roundcube/installer
+sudo chmod -R 755 /var/www/html/roundcube/installer
+
+🔎 4. Testar acesso direto
+
+Tente acessar:
+
+http://localhost/roundcube/installer/index.php
+
+
+Se ainda der 403, provavelmente o Apache está usando a configuração padrão do /etc/apache2/apache2.conf que bloqueia o acesso.
+Verifique esta parte:
+
+sudo nano /etc/apache2/apache2.conf
+
+
+Procure por:
+
+<Directory /var/www/>
+    Options Indexes FollowSymLinks
+    AllowOverride All
+    Require all granted
+</Directory>
+
+
+Garanta que tem Require all granted.
+
+Depois:
+
+sudo systemctl restart apache2
